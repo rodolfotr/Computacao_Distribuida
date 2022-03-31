@@ -9,6 +9,9 @@ Instalação do OpenACC:
 $ echo 'deb [trusted=yes] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
 $ sudo apt-get update -y
 $ sudo apt-get install -y nvhpc-22-3
+
+https://www.pgroup.com/resources/docs/18.3/pdf/openacc18_gs.pdf
+https://www.bu.edu/tech/files/2017/04/OpenACC-2017Spring.pdf
 */
 
 #include <stdio.h>
