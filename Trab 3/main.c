@@ -1,9 +1,14 @@
 /*
-        Universidade Federal da Fronteira Sul
-        Curso: Ciencia da Computação, 2º periodo
-        Disciplina: Trabalho Final ED 1.
-        Trabalho: Implementação de Quick Sort em lista dupla.
-        Aluno: Rodolfo Trevisol
+Universidade Federal da Fronteira Sul
+Curso: Ciencia da Computação
+Disciplina: Computação Distribuida
+Trabalho: Implementação de Quick Sort em lista dupla com ordenação em multithread e na GPU.
+Aluno: Rodolfo Trevisol
+
+Instalação do OpenACC:
+$ echo 'deb [trusted=yes] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
+$ sudo apt-get update -y
+$ sudo apt-get install -y nvhpc-22-3
 */
 
 #include <stdio.h>
