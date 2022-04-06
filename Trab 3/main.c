@@ -3,15 +3,10 @@ Universidade Federal da Fronteira Sul
 Curso: Ciencia da Computação
 Disciplina: Computação Distribuida
 Trabalho: Implementação de Quick Sort em lista dupla com ordenação em multithread e na GPU.
-Aluno: Rodolfo Trevisol
+Aluno: Rodolfo Trevisol, Murilo Olveira
 
-Instalação do OpenACC:
-$ echo 'deb [trusted=yes] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
-$ sudo apt-get update -y
-$ sudo apt-get install -y nvhpc-22-3
-
-https://www.pgroup.com/resources/docs/18.3/pdf/openacc18_gs.pdf
-https://www.bu.edu/tech/files/2017/04/OpenACC-2017Spring.pdf
+Instalação do OpenMP:
+sudo apt-get install gcc-multilib
 */
 
 #include <stdio.h>
@@ -21,6 +16,10 @@ https://www.bu.edu/tech/files/2017/04/OpenACC-2017Spring.pdf
 #include <unistd.h>
 #include <ctype.h>
 
+//OpenMP Include
+#include <omp.h>
+
+int N_NAMES = 50000;
 typedef struct info{
     char *nome;
     int idade;
@@ -35,22 +34,28 @@ typedef struct head{
     list *first,*last;
 }head;
 
-char NamePrefix[][5] = {
-    "cba", "tar", "xan", "koa", "nat",
-    "asd", "rvf", "gjf", "aps", "sfp",
-    "rge", "wmk"
+char NamePrefix[][50] = {
+    "leesd","jewel","chord","braid","ltain","cower","uncle","guard","hhaft","ridge",
+    "osund","hhame","beard","ljake","climb","point","carry","fence","gweat","march",
+    "noast","knife","relax","rough","guest","bheel","spray","lease","charm","draft",
+    "morce","lweep","write","dsoof","bweet","colon","voter","grade","patch","north",
+    "board","trend","grace","ksate","treat","grave","grain","quote","basis","mhnus"
 };
-char NameSuffix[][5] = {
-    "abc", "aus", "isx", "dox", "ith",
-    "ath", "ums", "aor", "orf", "xia",
-    "imu", "ais", "iur", "ore", "ofs",
-    "hsf"
+
+char NameSuffix[][50] = {
+    "axis","oven","thaw","fuss","road","leak","gain","like","tree","save",
+    "game","loud","drop","hang","pony","fool","safe","sock","sale","loot",
+    "wall","hour","view","glow","worm","wrap","bald","fire","slot","will",
+    "role","part","copy","core","calf","ball","band","pass","live","stir",
+    "zove","rule","salt","wash","open","need","gear","deck","moon","kick"
 };
-const char NameStems[][10] = {
-    "adu", "aes", "anm", "all", "ima",
-    "edu", "eis", "exr", "gus", "han",
-    "equ", "ara", "hum", "ice", "ill",
-    "ine", "iuv", "obe", "oul", "orb"
+
+const char NameStems[][50] = {
+    "new","win","owe","see","red","pay","tax","bow","cap","dip",
+    "bus","law","raw","pie","oil","pop","arm","sun","joy","rib",
+    "hen","eye","old","cry","fog","few","lie","pin","run","pit",
+    "put","dog","gun","can","top","era","tie","lid","egg","vat",
+    "add","get","fee","fat","beg","bin","end","fan","lay","kit"
 };
 
 
@@ -62,27 +67,53 @@ list* partition_list(list *first, list *last);
 void quickSortLista(list *first, list *last);
 
 int main(){
-    system("clear");
     info *ovo;
     list *lista=NULL;
     head *cabeca=malloc(sizeof(head));
     cabeca->first=NULL;
     cabeca->last=NULL;
-    
+    int a;
+
+
     srand ( time(0) ^ getpid() );
     
-    for(int i = 0; i < 20; i++){
+    for(int i = 0; i < N_NAMES; i++){
         ovo = criainfo();
         insert(cabeca, ovo, lista);
     }
-    printf("\nDesOrdenado:\n");
-    int a;
-    a = printar(cabeca);
-    
-    quickSortLista(cabeca->first, cabeca->last);
 
-    printf("\nOrdenado:\n");
-    a = printar(cabeca);
+
+
+
+    time_t     now;
+    struct tm  ts;
+    char       createdAt[80], endedAt[80];
+
+    //GPU
+    //#pragma omp target teams
+    //Parallel
+    #pragma omp parallel shared(cabeca) private(createdAt, endedAt)
+    {
+        time(&now);
+        ts = *localtime(&now);
+        strftime(createdAt, sizeof(createdAt), "%Y-%m-%d %H:%M:%S", &ts);
+        printf("\n\tThread %d iniciou: %s", omp_get_thread_num(), createdAt);
+        
+        //#pragma omp single nowait
+        quickSortLista(cabeca->first, cabeca->last);
+
+        time(&now);
+        ts = *localtime(&now);
+        strftime(endedAt, sizeof(endedAt), "%Y-%m-%d %H:%M:%S", &ts);
+        printf("\n\tThread %d finalizou: %s", omp_get_thread_num(), endedAt);
+
+    }
+    
+    if(omp_get_thread_num() == 0){
+        printf("\nEsperando 10seg:");
+        sleep(10);
+        //printar(cabeca);
+    }
     return 0;
 }
 
@@ -107,10 +138,10 @@ info *criainfo(){
     char *nome = "";
     int j = 0;
     int r;
-    char *Player1Name = malloc(9);;
-    strcat(Player1Name, NamePrefix[(rand() % 12)]);
-    strcat(Player1Name, NameStems[(rand() % 20)]);
-    strcat(Player1Name, NameSuffix[(rand() % 16)]);
+    char *Player1Name = malloc(12);
+    strcat(Player1Name, NamePrefix[(rand() % 50)]);
+    strcat(Player1Name, NameStems[(rand() % 50)]);
+    strcat(Player1Name, NameSuffix[(rand() % 50)]);
     Player1Name[0]=toupper(Player1Name[0]);
 
     novo->nome = Player1Name;
@@ -161,13 +192,22 @@ void remover(head *cabeca){
 
 void quickSortLista(list *first, list* last){
     list *pivo;
+    list *pirvoPrev;
+    list *pirvoNext;
 
     if(last != NULL && first != last && first != last->next){
         pivo = partition_list(first, last);
-        //paraleliza
-        quickSortLista(first, pivo->prev);
-        //paraleliza
-        quickSortLista(pivo->next, last);
+        
+        pirvoPrev = pivo->prev;
+        pirvoNext = pivo->next;
+        
+        /*#pragma omp parallel firstprivate(first, pirvoPrev)
+        {   */
+            quickSortLista(first, pirvoPrev);
+        //}
+    
+        quickSortLista(pirvoNext, last);
+        
     }
 }
 
@@ -208,48 +248,3 @@ list* partition_list(list *first, list* last){
 
   return j;
 }
-
-
-
-
-/*
-Node *radixSort(Node *listHead){
-    Node *ptrArray[10] = {0};
-    Node *tempPtr;
-    Node *headPtr =  listHead;
-
-    for(int index=2; index >= 0; index--){
-        for(int count=0; count <= 9; count++){
-            headPtr = listHead;
-            while(headPtr->next != NULL){
-                if(headPtr->itemArray[index] == count){
-                    tempPtr = ptrArray[count];
-                    if(tempPtr == NULL){
-                        int number = headPtr->item;
-                        tempPtr = new Node(number);
-                    }
-                    else{
-                        while(tempPtr->next != NULL){
-                            tempPtr = tempPtr->next;
-                        }
-                        tempPtr->next = new Node(headPtr->item);
-                    }
-                }
-                headPtr = headPtr->next;
-            }
-        }
-            headPtr = listHead;
-            while(headPtr->next != NULL){
-                for(int i=0; i <= 9; i++){
-                    tempPtr = ptrArray[i];
-                    while(tempPtr->next != NULL){
-                        headPtr->item = tempPtr->item;
-                        headPtr = headPtr->next;
-                        tempPtr = tempPtr->next;
-                    }
-                }
-            }
-    }
-    return listHead;
-}
-*/
